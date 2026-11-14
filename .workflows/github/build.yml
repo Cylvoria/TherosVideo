@@ -1,0 +1,37 @@
+name: Build APK
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip project (only if you uploaded the zip itself)
+        run: |
+          ZIP=$(find . -maxdepth 2 -iname 'TherosVideo*.zip' -not -path './.git/*' | head -1)
+          if [ -n "$ZIP" ]; then
+            echo "Using $ZIP"
+            mkdir -p _src
+            unzip -o "$ZIP" -d _src
+          else
+            echo "No zip found, building the files in the repo directly"
+          fi
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+      - name: Build
+        run: |
+          DIR=$(dirname "$(find . -name settings.gradle.kts -not -path './.git/*' | head -1)")
+          echo "Building in $DIR"
+          cd "$DIR"
+          gradle assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TherosVideo-apk
+          path: "**/app/build/outputs/apk/debug/app-debug.apk"
